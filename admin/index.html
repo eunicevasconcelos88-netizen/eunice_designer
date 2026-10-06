@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Painel | Chatbot</title>
+<style>
+:root{--bg:#080808;--s:#111112;--s2:#1a1a1c;--line:#232326;--text:#ededed;--mut:#9a9aa3;--acc:#6366f1;--err:#f87171;--ok:#22c55e;
+  font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
+a{color:#8b8fc7}
+button,input,select,textarea{font:inherit;color:inherit}
+.btn{background:transparent;border:1px solid rgba(99,102,241,.55);border-radius:6px;padding:9px 14px;cursor:pointer;color:#fff}
+.btn:hover{background:rgba(99,102,241,.14)}
+.btn.p{background:var(--acc);border-color:var(--acc)}
+.btn.d{border-color:#7f1d1d;color:var(--err)}
+.btn.s{padding:5px 10px;font-size:12px}
+input[type=text],input[type=email],input[type=password],input[type=number],input[type=date],select,textarea{width:100%;background:#0d0d0f;border:1px solid var(--line);border-radius:6px;padding:10px;color:#fff}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc)}
+textarea{min-height:90px;resize:vertical}
+.login{max-width:360px;margin:12vh auto;background:var(--s);border:1px solid var(--line);border-radius:12px;padding:28px;display:flex;flex-direction:column;gap:12px}
+.login h1{font-size:18px;text-transform:uppercase;letter-spacing:.04em}
+.err{color:var(--err);font-size:13px}
+.app{display:grid;grid-template-columns:230px 1fr;min-height:100vh}
+aside{border-right:1px solid var(--line);padding:18px 12px;background:var(--s);position:sticky;top:0;height:100vh;overflow:auto}
+aside h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;padding:0 10px 14px;color:var(--mut)}
+aside button{display:block;width:100%;text-align:left;background:none;border:0;padding:10px;border-radius:6px;cursor:pointer;color:var(--mut)}
+aside button:hover{background:var(--s2);color:#fff}
+aside button.on{background:rgba(99,102,241,.16);color:#fff}
+aside .out{margin-top:18px;border-top:1px solid var(--line);padding-top:12px}
+main{padding:26px;min-width:0}
+main h1{font-size:20px;margin-bottom:6px}
+.hint{color:var(--mut);font-size:13px;margin-bottom:18px;max-width:720px}
+.bar{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--s)}
+table{border-collapse:collapse;width:100%;min-width:560px}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top;font-size:13px}
+th{color:var(--mut);font-weight:500;font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+tr:last-child td{border-bottom:0}
+td img{width:42px;height:42px;object-fit:cover;border-radius:6px}
+.pill{font-size:11px;padding:2px 8px;border-radius:99px;background:#232326}
+.pill.on{background:rgba(34,197,94,.15);color:var(--ok)}
+.form{background:var(--s);border:1px solid var(--line);border-radius:10px;padding:18px;display:grid;gap:14px;max-width:760px}
+.form label{display:block;font-size:12px;color:var(--mut);margin-bottom:5px}
+.form .help{font-size:11px;color:#6d6d78;margin-top:4px}
+.chk{display:flex;gap:8px;align-items:center}
+.chk input{width:auto}
+.imgrow{display:flex;gap:10px;align-items:center}
+.imgrow img{width:56px;height:56px;border-radius:8px;object-fit:cover;background:#232326}
+.msgs{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+.m{padding:8px 11px;border-radius:8px;max-width:80%;white-space:pre-wrap;overflow-wrap:anywhere}
+.m.user{background:var(--acc);align-self:flex-end}.m.bot{background:var(--s2);border:1px solid var(--line)}
+@media(max-width:760px){.app{grid-template-columns:1fr}aside{position:static;height:auto;display:flex;flex-wrap:wrap;gap:4px}aside h2{width:100%}aside button{width:auto}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="../chatbot/config.js"></script>
+<script>
+(function(){
+'use strict';
+var CFG=window.CHATBOT_CONFIG||{};
+var sb=window.supabase.createClient(CFG.SUPABASE_URL,CFG.SUPABASE_ANON_KEY); // sessao persistida so aqui
+var $root=document.getElementById('root');
+var CATS=[];
+
+function h(tag,o,kids){var e=document.createElement(tag);o=o||{};Object.keys(o).forEach(function(k){
+  if(k==='cls')e.className=o[k];else if(k==='text')e.textContent=o[k];else if(k==='on'){Object.keys(o.on).forEach(function(ev){e.addEventListener(ev,o.on[ev])})}
+  else if(k==='value')e.value=o[k];else e.setAttribute(k,o[k])});
+  (kids||[]).forEach(function(c){if(c!=null)e.appendChild(typeof c==='string'?document.createTextNode(c):c)});return e}
+function brl(n){return (n===null||n===undefined||n==='')?'':Number(n).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}
+function dt(d){return d?new Date(d).toLocaleString('pt-BR'):''}
+function safeUrl(u){try{var x=new URL(u);return(x.protocol==='https:'||x.protocol==='http:')?x.href:null}catch(e){return null}}
+function catLabel(id){var c=CATS.filter(function(x){return x.id===id})[0];return c?c.name:''}
+
+/* ===== Definicao das telas ===== */
+var VIEWS=[
+ {key:'dashboard',label:'Dashboard',dash:true,hint:'Resumo do atendimento dos últimos 7 dias.'},
+ {key:'chatbot_settings',label:'Chatbot',single:true,hint:'Nome, foto, mensagens, link do WhatsApp e e-mail.',fields:[
+  {k:'enabled',l:'Chatbot ativo',t:'bool'},{k:'bot_name',l:'Nome da profissional',t:'text'},{k:'bot_photo_url',l:'Foto de perfil',t:'img'},
+  {k:'welcome_message',l:'Mensagem inicial',t:'area'},{k:'fallback_message',l:'Mensagem de fallback (sem informação cadastrada)',t:'area'},
+  {k:'whatsapp_link',l:'Link do WhatsApp (o que o cliente abre ao clicar)',t:'text',help:'Cole o link que você gerou, ex: https://wa.me/5575988212916. O chatbot acrescenta na mensagem qual pacote ou oferta o cliente clicou. Links curtos (wa.link) abrem como estão, sem o nome do pacote.'},
+  {k:'whatsapp_message',l:'Mensagem inicial do WhatsApp (usada quando o seu link não tem mensagem)',t:'area',help:'O chatbot completa com: Tenho interesse em: nome do pacote.'},{k:'notify_email',l:'E-mail da profissional (notificações)',t:'text'},
+  {k:'silence_seconds',l:'Segundos de silêncio para abandono',t:'num',help:'180 = 3 minutos'},
+  {k:'retention_message',l:'Texto da retenção com oferta',t:'area'},{k:'retention_final_message',l:'Texto da segunda e última tentativa',t:'area'},
+  {k:'no_offer_message',l:'Texto quando NÃO há oferta especial',t:'area'},{k:'decline_message',l:'Texto quando o cliente diz "não" e não há oferta (pede o contato)',t:'area'},{k:'lead_consent_text',l:'Texto do consentimento do contato',t:'text'}]},
+ {key:'categories',label:'Categorias',hint:'Grupos de serviços. Os visitantes veem apenas categorias ativas.',cols:['name','slug','sort','active'],order:'sort',fields:[
+  {k:'name',l:'Nome',t:'text',req:1},{k:'slug',l:'Slug (sem espaços, minúsculo)',t:'text',req:1},{k:'description',l:'Descrição',t:'area'},{k:'sort',l:'Ordem',t:'num'},{k:'active',l:'Ativa',t:'bool',def:true}]},
+ {key:'category_terms',label:'Palavras / Termos',hint:'Palavras que o cliente pode usar. Sem acento e minúsculo. Ao criar, separe vários termos por vírgula ou linha. Termo ambíguo faz o chatbot perguntar antes de mostrar valores.',cols:['term','category_id','is_ambiguous'],bulk:'term',fields:[
+  {k:'category_id',l:'Categoria',t:'cat',req:1},{k:'term',l:'Termo(s)',t:'text',req:1},{k:'is_ambiguous',l:'Termo ambíguo (pedir esclarecimento)',t:'bool'},
+  {k:'clarify_question',l:'Pergunta de esclarecimento (se ambíguo)',t:'text'},{k:'clarify_options',l:'Botões de esclarecimento (separe por vírgula)',t:'tags'}]},
+ {key:'services',label:'Serviços',hint:'Preço vazio = o chatbot encaminha para a profissional, nunca inventa.',cols:['image_url','name','category_id','price','active'],fields:[
+  {k:'name',l:'Nome',t:'text',req:1},{k:'category_id',l:'Categoria',t:'cat'},{k:'description',l:'Descrição',t:'area'},{k:'price',l:'Preço (R$)',t:'num',step:'0.01'},
+  {k:'image_url',l:'Imagem (aparece inteira no chat)',t:'img'},{k:'show_details',l:'Mostrar no chat as informações escritas (desmarque quando a imagem já traz preço e descrição)',t:'bool',def:true},{k:'related_terms',l:'Termos relacionados (vírgula)',t:'tags'},{k:'sort',l:'Ordem',t:'num'},{k:'active',l:'Ativo',t:'bool',def:true}]},
+ {key:'packages',label:'Pacotes',hint:'Pacotes ativos da categoria são mostrados direto ao cliente.',cols:['image_url','name','category_id','price','active'],fields:[
+  {k:'name',l:'Nome do pacote',t:'text',req:1},{k:'category_id',l:'Categoria',t:'cat',req:1},{k:'price',l:'Preço (R$)',t:'num',step:'0.01'},{k:'description',l:'Descrição',t:'area'},
+  {k:'items',l:'Itens incluídos (um por linha)',t:'lines'},{k:'image_url',l:'Imagem (aparece inteira no chat)',t:'img'},{k:'show_details',l:'Mostrar no chat as informações escritas (desmarque quando a imagem já traz preço e descrição)',t:'bool',def:true},{k:'sort',l:'Ordem',t:'num'},{k:'active',l:'Ativo',t:'bool',def:true}]},
+ {key:'special_offers',label:'Ofertas especiais',hint:'Mostradas na retenção (desistência ou 3 minutos de silêncio). Só aparecem se estiverem ativas e dentro da validade.',cols:['image_url','name','category_id','special_price','valid_until','active'],fields:[
+  {k:'name',l:'Nome da oferta',t:'text',req:1},{k:'category_id',l:'Categoria',t:'cat',req:1},{k:'description',l:'Descrição',t:'area'},
+  {k:'normal_price',l:'Preço normal (R$)',t:'num',step:'0.01'},{k:'special_price',l:'Preço especial (R$)',t:'num',step:'0.01'},{k:'image_url',l:'Imagem (aparece inteira no chat)',t:'img'},{k:'show_details',l:'Mostrar no chat as informações escritas (desmarque quando a imagem já traz preço e descrição)',t:'bool',def:true},
+  {k:'valid_until',l:'Validade (último dia)',t:'date'},{k:'condition_text',l:'Condição',t:'text'},{k:'display_text',l:'Texto apresentado ao cliente',t:'area'},{k:'active',l:'Ativa',t:'bool',def:true}]},
+ {key:'knowledge_base',label:'FAQ / Base',hint:'Perguntas e respostas autorizadas. O chatbot só responde com o texto que você escrever aqui.',cols:['question','active'],fields:[
+  {k:'question',l:'Pergunta',t:'text',req:1},{k:'answer',l:'Resposta autorizada',t:'area',req:1},{k:'keywords',l:'Palavras-chave (vírgula)',t:'tags'},{k:'active',l:'Ativa',t:'bool',def:true}]},
+ {key:'leads',label:'Leads',ro:true,filterCat:true,hint:'Contatos deixados no chatbot.',cols:['created_at','name','phone','email','category_name','package_seen','offer_shown','origin','note'],order:'created_at',desc:true},
+ {key:'uploaded_files',label:'Arquivos recebidos',ro:true,files:true,hint:'Arquivos enviados pelos clientes (armazenamento privado).',cols:['created_at','customer_name','file_name','category_name','size_bytes'],order:'created_at',desc:true},
+ {key:'conversations',label:'Conversas',ro:true,convs:true,hint:'Todas as conversas ficam arquivadas aqui até você excluir. O visitante não vê o histórico ao atualizar ou fechar a página.',cols:['created_at','status','category_id','shown_items','retention_stage','last_activity_at'],order:'last_activity_at',desc:true},
+ {key:'notification_events',label:'Notificações',ro:true,hint:'Fila de eventos (novo lead, novo arquivo) para e-mail.',cols:['created_at','type','sent_at'],order:'created_at',desc:true}
+];
+
+/* ===== Login ===== */
+function showLogin(msg){
+  $root.innerHTML='';
+  var e=h('input',{type:'email',placeholder:'E-mail',autocomplete:'username'}),p=h('input',{type:'password',placeholder:'Senha',autocomplete:'current-password'}),er=h('div',{cls:'err',text:msg||''});
+  var go=h('button',{cls:'btn p',type:'button',text:'Entrar'});
+  async function doLogin(){er.textContent='';go.disabled=true;
+    var r=await sb.auth.signInWithPassword({email:e.value.trim(),password:p.value});go.disabled=false;
+    if(r.error){er.textContent='E-mail ou senha inválidos.';return}boot()}
+  go.addEventListener('click',doLogin);p.addEventListener('keydown',function(ev){if(ev.key==='Enter')doLogin()});
+  $root.appendChild(h('div',{cls:'login'},[h('h1',{text:'Painel do chatbot'}),e,p,er,go]));
+}
+
+async function boot(){
+  var s=await sb.auth.getSession();
+  if(!s.data.session){showLogin();return}
+  var a=await sb.from('admins').select('user_id').eq('user_id',s.data.session.user.id).maybeSingle();
+  if(!a.data){await sb.auth.signOut();showLogin('Este usuário não tem permissão de administrador.');return}
+  var c=await sb.from('categories').select('id,name').order('sort');CATS=c.data||[];
+  shell(VIEWS[0]);
+}
+
+function shell(view){
+  $root.innerHTML='';
+  var nav=h('aside',{},[h('h2',{text:'Chatbot'})]);
+  VIEWS.forEach(function(v){nav.appendChild(h('button',{cls:v===view?'on':'',type:'button',text:v.label,on:{click:function(){shell(v)}}}))});
+  nav.appendChild(h('div',{cls:'out'},[h('button',{type:'button',text:'↗ Ver o site',on:{click:function(){window.open('/','_blank')}}}),h('button',{type:'button',text:'Sair',on:{click:async function(){await sb.auth.signOut();showLogin()}}})]));
+  var main=h('main');
+  $root.appendChild(h('div',{cls:'app'},[nav,main]));
+  main.appendChild(h('h1',{text:view.label}));main.appendChild(h('p',{cls:'hint',text:view.hint||''}));
+  var box=h('div');main.appendChild(box);
+  if(view.dash)dashView(box);else if(view.single)editSingle(view,box);else listView(view,box);
+}
+
+/* ===== Lista ===== */
+async function listView(view,box,filter){
+  box.innerHTML='';
+  var bar=h('div',{cls:'bar'});
+  if(!view.ro)bar.appendChild(h('button',{cls:'btn p',type:'button',text:'+ Novo',on:{click:function(){editRow(view,box,null)}}}));
+  if(view.filterCat){
+    var sel=h('select',{style:'max-width:260px'},[h('option',{value:'',text:'Todas as categorias'})]);
+    CATS.forEach(function(c){sel.appendChild(h('option',{value:c.id,text:c.name}))});sel.value=filter||'';
+    sel.addEventListener('change',function(){listView(view,box,sel.value)});bar.appendChild(sel);
+  }
+  box.appendChild(bar);
+  var q=sb.from(view.key).select('*').limit(500);
+  if(view.order)q=q.order(view.order,{ascending:!view.desc});else q=q.order('created_at',{ascending:false});
+  if(filter)q=q.eq('category_id',filter);
+  var r=await q;
+  if(r.error){box.appendChild(h('p',{cls:'err',text:'Erro ao carregar: '+r.error.message}));return}
+  var cols=view.cols||[];
+  var tr=h('tr');cols.forEach(function(c){tr.appendChild(h('th',{text:c}))});tr.appendChild(h('th',{text:''}));
+  var tbody=h('tbody');
+  if(!r.data.length)tbody.appendChild(h('tr',{},[h('td',{colspan:cols.length+1,text:'Nada cadastrado ainda.'})]));
+  r.data.forEach(function(row){
+    var t=h('tr');
+    cols.forEach(function(c){
+      var v=row[c],td=h('td');
+      if(c==='image_url'){var u=safeUrl(v);if(u)td.appendChild(h('img',{src:u,alt:''}))}
+      else if(typeof v==='boolean')td.appendChild(h('span',{cls:'pill'+(v?' on':''),text:v?'sim':'não'}));
+      else if(c==='category_id')td.textContent=catLabel(v);
+      else if(/price/.test(c))td.textContent=brl(v);
+      else if(/_at$/.test(c))td.textContent=dt(v);
+      else if(c==='size_bytes')td.textContent=v?Math.round(v/1024)+' KB':'';
+      else td.textContent=v==null?'':String(v);
+      t.appendChild(td)});
+    var act=h('td');
+    if(view.files)act.appendChild(h('button',{cls:'btn s',type:'button',text:'Abrir / baixar',on:{click:function(){openFile(row)}}}));
+    else if(view.convs){act.appendChild(h('button',{cls:'btn s',type:'button',text:'Ver conversa',on:{click:function(){openConv(row,box)}}}));act.appendChild(document.createTextNode(' '));act.appendChild(h('button',{cls:'btn s d',type:'button',text:'Excluir',on:{click:function(){delConv(row,function(){listView(view,box,filter)})}}}))}
+    else if(!view.ro)act.appendChild(h('button',{cls:'btn s',type:'button',text:'Editar',on:{click:function(){editRow(view,box,row)}}}));
+    t.appendChild(act);tbody.appendChild(t)});
+  box.appendChild(h('div',{cls:'tw'},[h('table',{},[h('thead',{},[tr]),tbody])]));
+}
+
+async function delConv(row,done){
+  if(!confirm('Excluir esta conversa e os arquivos enviados nela? Esta ação não pode ser desfeita.'))return;
+  var f=await sb.from('uploaded_files').select('storage_path').eq('conversation_id',row.id);
+  var paths=(f.data||[]).map(function(x){return x.storage_path});
+  if(paths.length)await sb.storage.from('briefings').remove(paths);
+  var d=await sb.from('conversations').delete().eq('id',row.id);
+  if(d.error){alert('Erro ao excluir: '+d.error.message);return}
+  done();
+}
+async function openFile(row){
+  var w=window.open('about:blank','_blank');
+  var r=await sb.storage.from('briefings').createSignedUrl(row.storage_path,120,{download:row.file_name});
+  if(r.error){if(w)w.close();alert('Não foi possível gerar o link: '+r.error.message);return}
+  if(w)w.location=r.data.signedUrl;else location.href=r.data.signedUrl;
+}
+async function openConv(row,box){
+  box.innerHTML='';
+  box.appendChild(h('button',{cls:'btn',type:'button',text:'← Voltar',on:{click:function(){shell(VIEWS.filter(function(v){return v.key==='conversations'})[0])}}}));
+  box.appendChild(document.createTextNode(' '));box.appendChild(h('button',{cls:'btn d',type:'button',text:'Excluir esta conversa',on:{click:function(){delConv(row,function(){shell(VIEWS.filter(function(v){return v.key==='conversations'})[0])})}}}));
+  var r=await sb.from('messages').select('*').eq('conversation_id',row.id).order('seq');
+  var wrap=h('div',{cls:'msgs'});(r.data||[]).forEach(function(m){wrap.appendChild(h('div',{cls:'m '+m.role,text:m.content}))});
+  box.appendChild(wrap);
+}
+
+/* ===== Formularios ===== */
+function fieldEl(f,val,ctx){
+  var wrap=h('div'),lab=h('label',{text:f.l+(f.req?' *':'')}),el;
+  if(f.t==='bool'){var c=h('input',{type:'checkbox'});c.checked=(val===undefined||val===null)?!!f.def:!!val;
+    wrap=h('label',{cls:'chk'},[c,f.l]);wrap.get=function(){return c.checked};return wrap}
+  if(f.t==='area'){el=h('textarea');el.value=val||''}
+  else if(f.t==='num'){el=h('input',{type:'number',step:f.step||'1'});el.value=(val===null||val===undefined)?'':val}
+  else if(f.t==='date'){el=h('input',{type:'date'});el.value=val||''}
+  else if(f.t==='cat'){el=h('select',{},[h('option',{value:'',text:'(nenhuma)'})]);CATS.forEach(function(c){el.appendChild(h('option',{value:c.id,text:c.name}))});el.value=val||''}
+  else if(f.t==='lines'){el=h('textarea');el.value=(val||[]).join('\n')}
+  else if(f.t==='tags'){el=h('input',{type:'text'});el.value=(val||[]).join(', ')}
+  else if(f.t==='img'){
+    var url=h('input',{type:'text',placeholder:'https://... ou envie uma imagem'});url.value=val||'';
+    var pv=h('img',{alt:''}),file=h('input',{type:'file',accept:'image/jpeg,image/png,image/webp,image/gif'}),st=h('span',{cls:'help'});
+    function upd(){var u=safeUrl(url.value);if(u){pv.src=u;pv.style.display=''}else pv.style.display='none'}
+    url.addEventListener('input',upd);upd();
+    file.addEventListener('change',async function(){var fl=file.files[0];if(!fl)return;
+      if(fl.size>5*1024*1024){st.textContent='Máximo 5 MB.';return}
+      var ext=(fl.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'');st.textContent='Enviando...';
+      var path=ctx+'/'+Date.now()+'-'+Math.random().toString(36).slice(2,8)+'.'+ext;
+      var r=await sb.storage.from('site-assets').upload(path,fl,{contentType:fl.type,upsert:false});
+      if(r.error){st.textContent='Erro: '+r.error.message;return}
+      url.value=sb.storage.from('site-assets').getPublicUrl(path).data.publicUrl;st.textContent='Imagem enviada.';upd()});
+    wrap.appendChild(lab);wrap.appendChild(h('div',{cls:'imgrow'},[pv,h('div',{style:'flex:1;display:grid;gap:6px'},[url,file,st])]));
+    wrap.get=function(){return url.value.trim()||null};return wrap}
+  else{el=h('input',{type:'text'});el.value=val||''}
+  wrap.appendChild(lab);wrap.appendChild(el);if(f.help)wrap.appendChild(h('div',{cls:'help',text:f.help}));
+  wrap.get=function(){var v=el.value;
+    if(f.t==='num')return v===''?null:Number(v);
+    if(f.t==='date')return v||null;
+    if(f.t==='cat')return v||null;
+    if(f.t==='lines')return v.split('\n').map(function(s){return s.trim()}).filter(Boolean);
+    if(f.t==='tags')return v.split(/[,\n]/).map(function(s){return s.trim()}).filter(Boolean);
+    return v.trim()};
+  return wrap;
+}
+
+function buildForm(view,row){
+  var els={},form=h('div',{cls:'form'});
+  view.fields.forEach(function(f){var w=fieldEl(f,row?row[f.k]:undefined,view.key);els[f.k]=w;form.appendChild(w)});
+  return {form:form,collect:function(){var o={},ok=true;
+    view.fields.forEach(function(f){var v=els[f.k].get();if(f.req&&(v===null||v===''))ok=false;o[f.k]=v});return ok?o:null}};
+}
+
+async function editSingle(view,box){
+  var r=await sb.from(view.key).select('*').eq('id',1).maybeSingle();
+  var b=buildForm(view,r.data||{}),msg=h('div',{cls:'err'});
+  var save=h('button',{cls:'btn p',type:'button',text:'Salvar',on:{click:async function(){
+    var o=b.collect();if(!o){msg.textContent='Preencha os campos obrigatórios.';return}
+    o.id=1;o.updated_at=new Date().toISOString();var s=await sb.from(view.key).upsert(o);
+    msg.style.color=s.error?'':'#22c55e';msg.textContent=s.error?'Erro: '+s.error.message:'Salvo.'}}});
+  b.form.appendChild(msg);b.form.appendChild(save);box.appendChild(b.form);
+}
+
+function editRow(view,box,row){
+  box.innerHTML='';
+  var b=buildForm(view,row),msg=h('div',{cls:'err'});
+  var save=h('button',{cls:'btn p',type:'button',text:'Salvar',on:{click:async function(){
+    var o=b.collect();if(!o){msg.textContent='Preencha os campos obrigatórios.';return}
+    save.disabled=true;var e;
+    if(row){e=(await sb.from(view.key).update(o).eq('id',row.id)).error}
+    else if(view.bulk&&typeof o[view.bulk]==='string'&&/[,\n]/.test(o[view.bulk])){
+      var rows=o[view.bulk].split(/[,\n]/).map(function(s){return s.trim().toLowerCase()}).filter(Boolean).map(function(t){var c=Object.assign({},o);c[view.bulk]=t;return c});
+      e=(await sb.from(view.key).upsert(rows,{onConflict:'category_id,term'})).error}
+    else{if(view.bulk)o[view.bulk]=String(o[view.bulk]).toLowerCase();e=(await sb.from(view.key).insert(o)).error}
+    if(e){save.disabled=false;msg.textContent='Erro: '+e.message;return}
+    if(view.key==='categories'){var c=await sb.from('categories').select('id,name').order('sort');CATS=c.data||[]}
+    shell(view)}}});
+  var cancel=h('button',{cls:'btn',type:'button',text:'Cancelar',on:{click:function(){shell(view)}}});
+  var row2=h('div',{cls:'bar'},[save,cancel]);
+  if(row)row2.appendChild(h('button',{cls:'btn d',type:'button',text:'Excluir',on:{click:async function(){
+    if(!confirm('Excluir este item? Esta ação não pode ser desfeita.'))return;
+    var d=await sb.from(view.key).delete().eq('id',row.id);if(d.error){msg.textContent='Erro: '+d.error.message;return}shell(view)}}}));
+  b.form.appendChild(msg);b.form.appendChild(row2);box.appendChild(b.form);
+}
+
+/* ===== Dashboard ===== */
+async function dashView(box){
+  var since=new Date(Date.now()-7*864e5).toISOString();
+  function cnt(t,f){var q=sb.from(t).select('*',{count:'exact',head:true});return f?f(q):q}
+  var R=await Promise.all([
+    cnt('conversations',function(q){return q.gte('created_at',since)}),
+    cnt('conversations',function(q){return q.gte('created_at',since).not('packages_shown_at','is',null)}),
+    cnt('conversations',function(q){return q.gte('created_at',since).not('offer_shown_at','is',null)}),
+    cnt('leads',function(q){return q.gte('created_at',since)}),
+    cnt('uploaded_files',function(q){return q.gte('created_at',since)}),
+    cnt('conversations',function(q){return q.gte('created_at',since).eq('status','WHATSAPP_REDIRECTED')}),
+    sb.from('leads').select('name,phone,category_name,package_seen,created_at').order('created_at',{ascending:false}).limit(6),
+    sb.from('conversations').select('created_at').gte('created_at',since)
+  ]);
+  var n=function(i){return R[i].count||0},tot=n(0),pct=function(x){return tot?Math.round(x*100/tot)+'%':'0%'};
+  var cards=h('div',{style:'display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px'});
+  [['Conversas',tot,''],['Pacotes apresentados',n(1),pct(n(1))],['Ofertas apresentadas',n(2),pct(n(2))],['Leads captados',n(3),pct(n(3))],['Foram ao WhatsApp',n(5),pct(n(5))],['Arquivos recebidos',n(4),'']].forEach(function(x){
+    cards.appendChild(h('div',{style:'background:var(--s);border:1px solid var(--line);border-radius:10px;padding:16px'},[
+      h('div',{style:'color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.08em',text:x[0]}),
+      h('div',{style:'font-size:28px;font-weight:600;margin-top:6px',text:String(x[1])}),
+      h('div',{style:'font-size:12px;color:var(--ok)',text:x[2]})]))});
+  box.appendChild(cards);
+  var days={};for(var i=6;i>=0;i--){var d=new Date(Date.now()-i*864e5);days[d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})]=0}
+  (R[7].data||[]).forEach(function(c){var k=new Date(c.created_at).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});if(k in days)days[k]++});
+  var max=Math.max.apply(null,Object.keys(days).map(function(k){return days[k]}).concat([1]));
+  var bars=h('div',{style:'display:flex;align-items:flex-end;gap:10px;height:140px'});
+  Object.keys(days).forEach(function(k,i,a){var b=h('div',{style:'width:100%;border-radius:3px 3px 0 0;background:'+(i===a.length-1?'var(--acc)':'#232326')+';height:'+Math.max(3,days[k]*100/max)+'px'});
+    bars.appendChild(h('div',{style:'flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;height:100%;font-size:11px;color:var(--mut)'},[h('span',{text:String(days[k])}),b,h('span',{text:k})]))});
+  box.appendChild(h('div',{style:'background:var(--s);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px'},[h('div',{style:'color:var(--mut);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px',text:'Conversas por dia'}),bars]));
+  box.appendChild(h('h2',{text:'Leads recentes',style:'font-size:16px;margin:6px 0 10px'}));
+  var tb=h('tbody');(R[6].data||[]).forEach(function(l){var tr=h('tr');[l.name,l.phone,l.category_name,l.package_seen,dt(l.created_at)].forEach(function(v){tr.appendChild(h('td',{text:v||''}))});tb.appendChild(tr)});
+  if(!(R[6].data||[]).length)tb.appendChild(h('tr',{},[h('td',{colspan:'5',text:'Nenhum lead ainda.'})]));
+  var th=h('tr');['Nome','WhatsApp','Categoria','Pacote','Quando'].forEach(function(c){th.appendChild(h('th',{text:c}))});
+  box.appendChild(h('div',{cls:'tw'},[h('table',{},[h('thead',{},[th]),tb])]));
+}
+
+boot();
+})();
+</script>
+</body>
+</html>
