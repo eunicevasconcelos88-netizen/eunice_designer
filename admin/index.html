@@ -52,6 +52,29 @@ td img{width:42px;height:42px;object-fit:cover;border-radius:6px}
 .msgs{display:flex;flex-direction:column;gap:6px;margin-top:12px}
 .m{padding:8px 11px;border-radius:8px;max-width:80%;white-space:pre-wrap;overflow-wrap:anywhere}
 .m.user{background:var(--acc);align-self:flex-end}.m.bot{background:var(--s2);border:1px solid var(--line)}
+/* editor de fluxos */
+.fhelp{display:flex;gap:18px;flex-wrap:wrap;color:var(--mut);font-size:12.5px;margin-bottom:12px}
+.fhelp b{color:#fff}
+.fcanvas{position:relative;height:72vh;min-height:480px;overflow:auto;border:1px solid var(--line);border-radius:10px;background:#0b0b0d}
+.finner{position:relative;width:3200px;height:2200px;background-image:radial-gradient(#26262c 1px,transparent 1px);background-size:22px 22px}
+.fsvg{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.fsvg path{fill:none;stroke:#8b8fc7;stroke-width:2}.fsvg path.tmp{stroke-dasharray:5 4;stroke:#6366f1}
+.fb{position:absolute;width:270px;background:var(--s);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.45)}
+.fb.k-trigger{border-color:#6b520f}
+.fh{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-radius:9px 9px 0 0;cursor:grab;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;background:#1c1d3a;user-select:none;touch-action:none}
+.k-trigger .fh{background:#3a2e0e;color:#fbbf24}
+.fx{background:none;border:0;color:var(--mut);cursor:pointer;font-size:13px}.fx:hover{color:var(--err)}
+.fbody{padding:12px;display:grid;gap:8px}
+.fbody label,.frow span{font-size:11px;color:var(--mut)}
+.fbody textarea,.fbody input[type=text],.fbody select{font-size:12.5px;padding:7px}
+.fbody textarea{min-height:70px}
+.frow{position:relative;display:flex;align-items:center;min-height:30px;border-top:1px dashed var(--line);padding-top:8px;margin-top:2px}
+.fport{position:absolute;right:-21px;top:50%;margin-top:-8px;width:16px;height:16px;border-radius:50%;background:#2a2a30;border:2px solid #8b8fc7;cursor:crosshair;touch-action:none}
+.fport.on{background:#6366f1;border-color:#c7c9ff}
+.fbtn{position:relative;background:#0d0d0f;border:1px solid var(--line);border-radius:8px;padding:8px;display:grid;gap:6px}
+.fbtn .fport{top:20px;margin-top:0}
+.fbl{display:flex;gap:6px;align-items:center}
+.fimg{display:grid;gap:5px}.fimg input[type=file]{font-size:11px;padding:4px}
 @media(max-width:760px){.app{grid-template-columns:1fr}aside{position:static;height:auto;display:flex;flex-wrap:wrap;gap:4px}aside h2{width:100%}aside button{width:auto}}
 </style>
 </head>
@@ -104,6 +127,7 @@ var VIEWS=[
   {k:'valid_until',l:'Validade (último dia)',t:'date'},{k:'condition_text',l:'Condição',t:'text'},{k:'display_text',l:'Texto apresentado ao cliente',t:'area'},{k:'active',l:'Ativa',t:'bool',def:true}]},
  {key:'knowledge_base',label:'FAQ / Base',hint:'Perguntas e respostas autorizadas. O chatbot só responde com o texto que você escrever aqui.',cols:['question','active'],fields:[
   {k:'question',l:'Pergunta',t:'text',req:1},{k:'answer',l:'Resposta autorizada',t:'area',req:1},{k:'keywords',l:'Palavras-chave (vírgula)',t:'tags'},{k:'active',l:'Ativa',t:'bool',def:true}]},
+ {key:'flow_blocks',label:'Fluxos de conversa',flow:true,hint:'Monte respostas para perguntas que o chatbot não entende, como no ManyChat. Cada bloco é uma caixa: o Gatilho define o que o cliente escreve e a Mensagem é a resposta, com botões que levam a outros blocos.'},
  {key:'leads',label:'Leads',ro:true,filterCat:true,hint:'Contatos deixados no chatbot.',cols:['created_at','name','phone','email','category_name','package_seen','offer_shown','origin','note'],order:'created_at',desc:true},
  {key:'uploaded_files',label:'Arquivos recebidos',ro:true,files:true,hint:'Arquivos enviados pelos clientes (armazenamento privado).',cols:['created_at','customer_name','file_name','category_name','size_bytes'],order:'created_at',desc:true},
  {key:'conversations',label:'Conversas',ro:true,convs:true,hint:'Todas as conversas ficam arquivadas aqui até você excluir. O visitante não vê o histórico ao atualizar ou fechar a página.',cols:['created_at','status','category_id','shown_items','retention_stage','last_activity_at'],order:'last_activity_at',desc:true},
@@ -140,7 +164,7 @@ function shell(view){
   $root.appendChild(h('div',{cls:'app'},[nav,main]));
   main.appendChild(h('h1',{text:view.label}));main.appendChild(h('p',{cls:'hint',text:view.hint||''}));
   var box=h('div');main.appendChild(box);
-  if(view.dash)dashView(box);else if(view.single)editSingle(view,box);else listView(view,box);
+  if(view.dash)dashView(box);else if(view.flow)flowView(box);else if(view.single)editSingle(view,box);else listView(view,box);
 }
 
 /* ===== Lista ===== */
@@ -317,6 +341,125 @@ async function dashView(box){
   if(!(R[6].data||[]).length)tb.appendChild(h('tr',{},[h('td',{colspan:'5',text:'Nenhum lead ainda.'})]));
   var th=h('tr');['Nome','WhatsApp','Categoria','Pacote','Quando'].forEach(function(c){th.appendChild(h('th',{text:c}))});
   box.appendChild(h('div',{cls:'tw'},[h('table',{},[h('thead',{},[th]),tb])]));
+}
+
+/* ===== Editor de fluxos (estilo ManyChat) ===== */
+async function flowView(box){
+  box.innerHTML='';
+  var r=await sb.from('flow_blocks').select('*').order('created_at');
+  if(r.error){box.appendChild(h('p',{cls:'err',text:'Erro ao carregar: '+r.error.message}));return}
+  var blocks=(r.data||[]).map(function(b){return{id:b.id,kind:b.kind,title:b.title||'',x:b.x,y:b.y,data:b.data||{}}});
+  var removed=[],ports=[],NS='http://www.w3.org/2000/svg';
+  var status=h('span',{style:'font-size:12.5px;color:var(--mut)'});
+  var inner=h('div',{cls:'finner'}),canvas=h('div',{cls:'fcanvas'},[inner]);
+  var svg=document.createElementNS(NS,'svg');svg.setAttribute('class','fsvg');
+  svg.innerHTML='<defs><marker id="fa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#8b8fc7" stroke="none"/></marker></defs>';
+  function uid(){return(window.crypto&&crypto.randomUUID)?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){var q=Math.random()*16|0;return(c==='x'?q:(q&3|8)).toString(16)})}
+  function mark(){status.style.color='#fbbf24';status.textContent='Alterações não salvas'}
+  function mkPath(x1,y1,x2,y2,cls,straight){var p=document.createElementNS(NS,'path'),dx=Math.max(60,Math.abs(x2-x1)/2);p.setAttribute('class',cls);
+    p.setAttribute('d',straight?('M'+x1+' '+y1+' L'+x2+' '+y2):('M'+x1+' '+y1+' C'+(x1+dx)+' '+y1+' '+(x2-dx)+' '+y2+' '+x2+' '+y2));
+    if(!straight)p.setAttribute('marker-end','url(#fa)');return p}
+  function redraw(){
+    Array.prototype.slice.call(svg.querySelectorAll('path.e')).forEach(function(p){p.remove()});
+    var rc=inner.getBoundingClientRect();
+    ports.forEach(function(p){var t=p.get();if(!t)return;var tb=inner.querySelector('.fb[data-id="'+t+'"]');if(!tb)return;
+      var a=p.el.getBoundingClientRect();svg.appendChild(mkPath(a.left+a.width/2-rc.left,a.top+a.height/2-rc.top,tb.offsetLeft,tb.offsetTop+20,'e'))})}
+  function render(){inner.innerHTML='';inner.appendChild(svg);ports=[];blocks.forEach(function(b){inner.appendChild(blockEl(b))});requestAnimationFrame(redraw)}
+
+  function port(b,get,set){
+    var el=h('span',{cls:'fport'+(get()?' on':''),title:'Arraste até outro bloco para ligar. Clique para desligar.'});
+    ports.push({el:el,get:get});
+    el.addEventListener('pointerdown',function(e){
+      e.preventDefault();e.stopPropagation();el.setPointerCapture(e.pointerId);
+      var rc=inner.getBoundingClientRect(),a=el.getBoundingClientRect(),x1=a.left+a.width/2-rc.left,y1=a.top+a.height/2-rc.top,moved=0;
+      var tmp=mkPath(x1,y1,x1,y1,'tmp',true);svg.appendChild(tmp);
+      function mv(ev){moved=Math.max(moved,Math.abs(ev.clientX-(a.left+8))+Math.abs(ev.clientY-(a.top+8)));var r2=inner.getBoundingClientRect();tmp.setAttribute('d','M'+x1+' '+y1+' L'+(ev.clientX-r2.left)+' '+(ev.clientY-r2.top))}
+      function up(ev){el.removeEventListener('pointermove',mv);el.removeEventListener('pointerup',up);tmp.remove();
+        var hit=document.elementFromPoint(ev.clientX,ev.clientY),fb=hit&&hit.closest?hit.closest('.fb'):null;
+        if(fb&&fb.dataset.id!==b.id){set(fb.dataset.id);mark();render()}
+        else if(moved<5&&get()){set(null);mark();render()}}
+      el.addEventListener('pointermove',mv);el.addEventListener('pointerup',up)});
+    return el}
+  function prow(label,b,key){return h('div',{cls:'frow'},[h('span',{text:label}),port(b,function(){return b.data[key]||null},function(v){b.data[key]=v})])}
+
+  function drag(b,head,el){head.addEventListener('pointerdown',function(e){
+    if(e.target.closest('button,input,textarea,select'))return;
+    e.preventDefault();head.setPointerCapture(e.pointerId);var sx=e.clientX,sy=e.clientY,bx=b.x,by=b.y,mvd=false;
+    function mv(ev){mvd=true;b.x=Math.max(0,bx+ev.clientX-sx);b.y=Math.max(0,by+ev.clientY-sy);el.style.left=b.x+'px';el.style.top=b.y+'px';redraw()}
+    function up(){head.removeEventListener('pointermove',mv);head.removeEventListener('pointerup',up);if(mvd)mark()}
+    head.addEventListener('pointermove',mv);head.addEventListener('pointerup',up)})}
+
+  function imgInput(b){
+    var w=h('div',{cls:'fimg'}),url=h('input',{type:'text',placeholder:'Imagem (opcional): cole o link ou envie'}),file=h('input',{type:'file',accept:'image/jpeg,image/png,image/webp,image/gif'}),st=h('div',{cls:'help'});
+    url.value=b.data.image_url||'';
+    url.addEventListener('input',function(){b.data.image_url=url.value.trim()||null;mark()});
+    file.addEventListener('change',async function(){var fl=file.files[0];if(!fl)return;if(fl.size>5*1024*1024){st.textContent='Máximo 5 MB.';return}
+      var ext=(fl.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,''),path='flows/'+Date.now()+'-'+Math.random().toString(36).slice(2,8)+'.'+ext;st.textContent='Enviando...';
+      var up=await sb.storage.from('site-assets').upload(path,fl,{contentType:fl.type,upsert:false});
+      if(up.error){st.textContent='Erro: '+up.error.message;return}
+      url.value=sb.storage.from('site-assets').getPublicUrl(path).data.publicUrl;b.data.image_url=url.value;mark();st.textContent='Imagem enviada.'});
+    w.appendChild(url);w.appendChild(file);w.appendChild(st);return w}
+
+  var ACTIONS=[['block','Ir para outro bloco'],['category','Mostrar os pacotes de uma categoria'],['whatsapp','Abrir o WhatsApp'],['lead','Pedir o contato do cliente'],['link','Abrir um link']];
+  function btnRow(b,bt,i){
+    var row=h('div',{cls:'fbtn'}),lab=h('input',{type:'text',placeholder:'Texto do botão',maxlength:'60'}),sel=h('select'),rm=h('button',{cls:'fx',type:'button',title:'Remover botão',text:'✕'});
+    lab.value=bt.label||'';lab.addEventListener('input',function(){bt.label=lab.value;mark()});
+    ACTIONS.forEach(function(o){var op=h('option',{value:o[0],text:o[1]});sel.appendChild(op)});sel.value=bt.action||'block';
+    sel.addEventListener('change',function(){bt.action=sel.value;mark();render()});
+    rm.addEventListener('click',function(){b.data.buttons.splice(i,1);mark();render()});
+    row.appendChild(h('div',{cls:'fbl'},[lab,rm]));row.appendChild(sel);
+    if(bt.action==='category'){var cs=h('select',{},[h('option',{value:'',text:'(escolha a categoria)'})]);CATS.forEach(function(c){cs.appendChild(h('option',{value:c.id,text:c.name}))});cs.value=bt.category_id||'';cs.addEventListener('change',function(){bt.category_id=cs.value||null;mark()});row.appendChild(cs)}
+    if(bt.action==='whatsapp'){var wt=h('input',{type:'text',placeholder:'Mensagem que vai no WhatsApp (opcional)',maxlength:'300'});wt.value=bt.text||'';wt.addEventListener('input',function(){bt.text=wt.value;mark()});row.appendChild(wt)}
+    if(bt.action==='link'){var lu=h('input',{type:'text',placeholder:'https://...'});lu.value=bt.url||'';lu.addEventListener('input',function(){bt.url=lu.value.trim();mark()});row.appendChild(lu)}
+    if((bt.action||'block')==='block')row.appendChild(port(b,function(){return bt.target||null},function(v){bt.target=v}));
+    return row}
+
+  function blockEl(b){
+    var el=h('div',{cls:'fb k-'+b.kind,'data-id':b.id}),head=h('div',{cls:'fh'}),body=h('div',{cls:'fbody'});
+    el.style.left=b.x+'px';el.style.top=b.y+'px';
+    var del=h('button',{cls:'fx',type:'button',title:'Excluir bloco',text:'✕'});del.addEventListener('click',function(){if(confirm('Excluir este bloco?'))removeBlock(b)});
+    head.appendChild(h('span',{text:b.kind==='trigger'?'⚡ Gatilho':'💬 Mensagem'}));head.appendChild(del);
+    el.appendChild(head);el.appendChild(body);drag(b,head,el);
+    if(b.kind==='trigger'){
+      var ta=h('textarea',{placeholder:'ex: horário, que horas abre, onde fica'});ta.value=(b.data.keywords||[]).join(', ');
+      ta.addEventListener('input',function(){b.data.keywords=ta.value.split(/[,\n]/).map(function(x){return x.trim()}).filter(Boolean);mark()});
+      body.appendChild(h('label',{text:'Quando o cliente escrever (palavras ou frases, separe por vírgula)'}));body.appendChild(ta);
+      body.appendChild(prow('Responder com',b,'next'));
+    }else{
+      var tx=h('textarea',{placeholder:'Escreva a resposta aqui...',maxlength:'1500'});tx.value=b.data.text||'';
+      tx.addEventListener('input',function(){b.data.text=tx.value;mark()});
+      body.appendChild(tx);body.appendChild(imgInput(b));
+      b.data.buttons=b.data.buttons||[];b.data.buttons.forEach(function(bt,i){body.appendChild(btnRow(b,bt,i))});
+      var add=h('button',{cls:'btn s',type:'button',text:'+ Botão'});
+      add.addEventListener('click',function(){if(b.data.buttons.length>=6)return;b.data.buttons.push({label:'',action:'block'});mark();render()});
+      body.appendChild(add);body.appendChild(prow('Depois, enviar automaticamente',b,'next'));
+    }
+    return el}
+
+  function removeBlock(b){
+    blocks=blocks.filter(function(x){return x.id!==b.id});removed.push(b.id);
+    blocks.forEach(function(x){if(x.data.next===b.id)x.data.next=null;(x.data.buttons||[]).forEach(function(bt){if(bt.target===b.id)bt.target=null})});
+    mark();render()}
+  function addBlock(kind,data){var n=blocks.length;blocks.push({id:uid(),kind:kind,title:'',x:canvas.scrollLeft+40+(n%6)*30,y:canvas.scrollTop+40+(n%6)*30,data:data||{}});mark();render()}
+  function sample(){
+    var t=uid(),m1=uid(),m2=uid(),y=canvas.scrollTop+40,x=canvas.scrollLeft+30;
+    blocks.push({id:t,kind:'trigger',title:'',x:x,y:y,data:{keywords:['exemplo de pergunta','outra forma de perguntar'],next:m1}});
+    blocks.push({id:m1,kind:'message',title:'',x:x+330,y:y,data:{text:'Escreva aqui a sua resposta.',buttons:[{label:'Falar com a profissional',action:'whatsapp',text:'Gostaria de falar sobre meu projeto.'},{label:'Ver outra opção',action:'block',target:m2}]}});
+    blocks.push({id:m2,kind:'message',title:'',x:x+660,y:y+40,data:{text:'Escreva aqui outra resposta.',buttons:[{label:'Deixar meu contato',action:'lead'}]}});
+    mark();render()}
+  async function save(){
+    status.style.color='var(--mut)';status.textContent='Salvando...';var now=new Date().toISOString();
+    if(removed.length){var d=await sb.from('flow_blocks').delete().in('id',removed);if(d.error){status.style.color='var(--err)';status.textContent='Erro: '+d.error.message;return}removed=[]}
+    var rows=blocks.map(function(b){return{id:b.id,kind:b.kind,title:b.title||null,x:Math.round(b.x),y:Math.round(b.y),data:b.data,active:true,updated_at:now}});
+    if(rows.length){var u=await sb.from('flow_blocks').upsert(rows);if(u.error){status.style.color='var(--err)';status.textContent='Erro: '+u.error.message;return}}
+    status.style.color='var(--ok)';status.textContent='Salvo. O chat já usa este fluxo.'}
+
+  box.appendChild(h('div',{cls:'fhelp'},[h('span',{},[h('b',{text:'1. '}),'Crie um ',h('b',{text:'Gatilho'}),' com as palavras que o cliente pode escrever.']),h('span',{},[h('b',{text:'2. '}),'Crie uma ',h('b',{text:'Mensagem'}),' com a resposta, imagem e botões.']),h('span',{},[h('b',{text:'3. '}),'Arraste a ',h('b',{text:'bolinha'}),' de um bloco até o próximo para ligar.']),h('span',{},[h('b',{text:'4. '}),'Clique em ',h('b',{text:'Salvar tudo'}),'.'])]));
+  var bar=h('div',{cls:'bar'}),bt1=h('button',{cls:'btn',type:'button',text:'+ Gatilho'}),bt2=h('button',{cls:'btn',type:'button',text:'+ Mensagem'}),bt3=h('button',{cls:'btn',type:'button',text:'Criar exemplo'}),bt4=h('button',{cls:'btn p',type:'button',text:'Salvar tudo'});
+  bt1.addEventListener('click',function(){addBlock('trigger',{keywords:[]})});bt2.addEventListener('click',function(){addBlock('message',{text:'',buttons:[]})});
+  bt3.addEventListener('click',sample);bt4.addEventListener('click',save);
+  [bt1,bt2,bt3,bt4,status].forEach(function(x){bar.appendChild(x)});
+  box.appendChild(bar);box.appendChild(canvas);render();
 }
 
 boot();
